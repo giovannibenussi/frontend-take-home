@@ -1,6 +1,7 @@
 import { Badge, Select, Skeleton } from "@radix-ui/themes";
 import { useRoles } from "../hooks/useRoles";
 import { useEffect, useState } from "react";
+import { ErrorCallout } from "./ErrorCallout";
 
 export function RoleSelect({
   defaultValue,
@@ -22,6 +23,11 @@ export function RoleSelect({
 
   if (status === "pending") {
     return <Skeleton height="1.8em" />;
+  }
+  if (status === "error") {
+    return (
+      <ErrorCallout content="There was an error loading the list of roles" />
+    );
   }
 
   return (
