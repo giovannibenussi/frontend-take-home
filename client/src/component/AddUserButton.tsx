@@ -1,5 +1,5 @@
 import { PlusIcon } from "@radix-ui/react-icons";
-import { Button } from "@radix-ui/themes";
+import { Button, Flex } from "@radix-ui/themes";
 import { useState } from "react";
 import AddUserDialog from "./AddUserDialog";
 
@@ -8,16 +8,17 @@ export function AddUserButton() {
 
   return (
     <>
-      {showAddUserModal && (
-        <AddUserDialog
-          user={undefined}
-          onClose={() => setShowAddUserModal(false)}
-        />
-      )}
       <Button type="button" onClick={() => setShowAddUserModal(true)}>
-        <PlusIcon />
-        Add User
+        <Flex gap="3" align="center">
+          <PlusIcon />
+          <span>Add user</span>
+        </Flex>
       </Button>
+      <AddUserDialog
+        open={showAddUserModal}
+        user={undefined}
+        onOpenChange={setShowAddUserModal}
+      />
     </>
   );
 }

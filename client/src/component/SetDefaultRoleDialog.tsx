@@ -4,30 +4,31 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSR } from "./LoadingSR";
 
 export function SetDefaultRoleDialog({
+  open,
   role,
-  onClose,
+  onOpenChange,
 }: {
+  open: boolean;
   role: RoleType;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
 
   const { mutate, status } = useMutation({
     mutationFn: () => updateRole(role.id, { isDefault: true }),
     onSuccess: () => {
-      onClose();
+      onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ["roles"] });
     },
   });
 
   return (
-    <Dialog.Root open onOpenChange={() => onClose()}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content maxWidth="485px">
         <Dialog.Title mt="1">Set role as default</Dialog.Title>
         <Dialog.Description size="2" mb="3">
-          Are you sure? The role <Strong>{role.name}</Strong> will be used by
-          default. All new users will be assigned to this role unless you change
-          it.
+          Are you sure? The role <Strong>{role.name}</Strong> will be set by
+          default when creating new users unless specified otherwise.
         </Dialog.Description>
 
         <Flex gap="3" mt="4" justify="end">

@@ -1,93 +1,64 @@
-import {
-  Avatar,
-  Badge,
-  Box,
-  DropdownMenu,
-  Flex,
-  IconButton,
-  Skeleton,
-  Table,
-  Tooltip,
-} from "@radix-ui/themes";
+import { Badge, Box, Flex, Skeleton, Table, Tooltip } from "@radix-ui/themes";
 import { getRoles, RoleType } from "../api";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { SetDefaultRoleDialog } from "./SetDefaultRoleDialog";
-import { EditRoleDialog } from "./EditRoleDialog";
 import AddRoleButton from "./AddRoleButton";
 import { ErrorCallout } from "./ErrorCallout";
+import { Actions } from "./Actions";
+import AddRoleDialog from "./AddRoleDialog";
 
-function PendingUIRows() {
-  return Array.from({ length: 10 }, () => (
+function PendingUIRows({ length }: { length: number }) {
+  return Array.from({ length }, () => (
     <Table.Row>
       <Table.Cell>
-        <Flex align="center" gap="2">
-          <Skeleton>
-            <Avatar fallback="" radius="full" size="1" />
-          </Skeleton>
-          <Skeleton width="120px" height="1.4em">
-            Loading...
-          </Skeleton>
-          <Skeleton width="80px" height="1.4em">
-            Loading...
-          </Skeleton>
-        </Flex>
+        <Skeleton width="150px" height="1.4em" className="block">
+          Loading...
+        </Skeleton>
       </Table.Cell>
-      <Table.Cell>
-        <Skeleton>Loading...</Skeleton>
+      <Table.Cell colSpan={2}>
+        <Skeleton width="300px" height="1.4em" className="block">
+          Loading...
+        </Skeleton>
       </Table.Cell>
-      <Table.Cell>
-        <Skeleton>Loading...</Skeleton>
-      </Table.Cell>
-      <Table.Cell></Table.Cell>
     </Table.Row>
   ));
 }
 
 function RoleActions({ role }: { role: RoleType }) {
-  const [modal, setModal] = useState<
-    "delete" | "setDefault" | "edit" | undefined
-  >();
+  const [modal, setModal] = useState<string | undefined>();
 
   return (
     <>
-      {modal === "delete" && (
-        <DeleteRoleDialog role={role} onClose={() => setModal(undefined)} />
-      )}
-      {modal === "setDefault" && (
-        <SetDefaultRoleDialog role={role} onClose={() => setModal(undefined)} />
-      )}
-      {modal === "edit" && (
-        <EditRoleDialog role={role} onClose={() => setModal(undefined)} />
-      )}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <IconButton variant="ghost">
-            <span className="sr-only">Actions for the {role.name} role</span>
-            <DotsHorizontalIcon />
-          </IconButton>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content>
-          <DropdownMenu.Item onClick={() => setModal("edit")}>
-            Edit
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onClick={() => !role.isDefault && setModal("setDefault")}
-            disabled={role.isDefault}
-          >
-            Set as default
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            color="red"
-            onClick={() => !role.isDefault && setModal("delete")}
-            disabled={role.isDefault}
-          >
-            Delete
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+      <Actions
+        label={`Actions for the ${role.name} role`}
+        onValueChange={(action) => setModal(action)}
+        actions={[
+          { label: "Edit role", action: "edit", disabled: false },
+          {
+            label: "Set as default",
+            action: "setDefault",
+            disabled: role.isDefault,
+          },
+          { label: "Delete role", action: "delete", disabled: role.isDefault },
+        ]}
+      />
+      <DeleteRoleDialog
+        role={role}
+        open={modal === "delete"}
+        onOpenChange={() => setModal(undefined)}
+      />
+      <SetDefaultRoleDialog
+        role={role}
+        open={modal === "setDefault"}
+        onOpenChange={() => setModal(undefined)}
+      />
+      <AddRoleDialog
+        role={role}
+        open={modal === "edit"}
+        onOpenChange={() => setModal(undefined)}
+      />
     </>
   );
 }
@@ -100,7 +71,7 @@ export function Roles() {
   const roles = data?.data;
 
   return (
-    <Flex direction="column" gap="4">
+    <Flex direction="column" gap="5">
       <Box className="self-end">
         <AddRoleButton />
       </Box>
@@ -121,7 +92,7 @@ export function Roles() {
 
           <Table.Body>
             {status === "pending" ? (
-              <PendingUIRows />
+              <PendingUIRows length={10} />
             ) : (
               roles?.map((role) => (
                 <Table.Row key={role.id}>

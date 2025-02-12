@@ -5,7 +5,7 @@
   <h3 align="center" style="margin-top: 0.5em;">Frontend Take-Home Assignment</h3>
 
   <p align="center">
-WorkOS's Frontend Take-Home Assignment implementation by Giovanni Benussi.
+WorkOS's Frontend Take-Home Assignment Implementation by Giovanni Benussi.
     <br />
   </p>
 </div>

@@ -4,18 +4,20 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSR } from "./LoadingSR";
 
 export function DeleteUserDialog({
+  open,
   user,
-  onClose,
+  onOpenChange,
 }: {
+  open: boolean;
   user: UserType;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
 
   const { mutate, status } = useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
-      onClose();
+      onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
@@ -26,7 +28,7 @@ export function DeleteUserDialog({
   }
 
   return (
-    <Dialog.Root open onOpenChange={onClose}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content maxWidth="485px">
         <Dialog.Title mt="1">Delete user</Dialog.Title>
         <Dialog.Description size="2" mb="3">
@@ -41,9 +43,10 @@ export function DeleteUserDialog({
           <Dialog.Close>
             <Button
               type="button"
-              variant="soft"
+              variant="surface"
               color="gray"
               disabled={status === "pending"}
+              highContrast
             >
               Cancel
             </Button>

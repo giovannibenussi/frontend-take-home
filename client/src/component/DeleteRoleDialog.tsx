@@ -4,11 +4,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSR } from "./LoadingSR";
 
 export function DeleteRoleDialog({
+  open,
   role,
-  onClose,
+  onOpenChange,
 }: {
+  open: boolean;
   role: RoleType;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
 
@@ -19,13 +21,13 @@ export function DeleteRoleDialog({
         return;
       }
 
-      onClose();
+      onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ["roles"] });
     },
   });
 
   return (
-    <Dialog.Root open onOpenChange={onClose}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content maxWidth="485px">
         <Dialog.Title mt="1">Delete role</Dialog.Title>
         <Dialog.Description size="2" mb="3">

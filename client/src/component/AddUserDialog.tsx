@@ -1,20 +1,24 @@
 import { AlertDialog, Button, Flex, TextField, Text } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { addOrUpdateUser, UserType } from "../api";
+import { addOrUpdateUser, formUserSchema, UserType } from "../api";
 import { RoleSelect } from "./RoleSelect";
 import { LoadingSR } from "./LoadingSR";
 
 export default function AddUserDialog({
+  open,
   user,
-  onClose,
+  onOpenChange,
 }: {
+  open: boolean;
   user: UserType | undefined;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const [first, setFirst] = useState(user?.first || "");
   const [last, setLast] = useState(user?.last || "");
+  const [roleId, setRoleId] = useState(user?.roleId || "");
+  const [showErrors, setShowErrors] = useState(false);
 
   const { data, mutate, status } = useMutation({
     mutationFn: addOrUpdateUser,
@@ -23,26 +27,40 @@ export default function AddUserDialog({
         return;
       }
 
-      onClose();
+      const createdNewUser = !user?.id;
+      if (createdNewUser) {
+        setFirst("");
+        setLast("");
+        setRoleId("");
+        setShowErrors(false);
+      }
+
+      onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      setFirst("");
-      setLast("");
     },
   });
 
+  const formData = {
+    first,
+    last,
+    roleId,
+    userId: user?.id,
+  };
+  const parsedData = formUserSchema.safeParse(formData);
+  const errors = parsedData.error?.format();
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    if (!parsedData.success) {
+      setShowErrors(true);
+      return;
+    }
 
-    const first = (formData.get("first") || "") as string;
-    const last = (formData.get("last") || "") as string;
-    const roleId = (formData.get("roleId") || "") as string;
-    const userId = (formData.get("userId") || "") as string;
-    mutate({ first, last, roleId, userId });
+    mutate(formData);
   }
 
   return (
-    <AlertDialog.Root open onOpenChange={() => onClose()}>
+    <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Content maxWidth="550px">
         <AlertDialog.Title>
           {user ? `Edit user ${user.first} ${user.last}` : "Add user"}
@@ -53,7 +71,6 @@ export default function AddUserDialog({
         </AlertDialog.Description>
 
         <form onSubmit={handleSubmit}>
-          <input type="hidden" name="userId" value={user?.id} />
           <Flex gap="3" mt="4" direction="column">
             <label className="flex flex-col gap-1">
               <Text weight="bold">First name</Text>
@@ -62,8 +79,14 @@ export default function AddUserDialog({
                 value={first}
                 onChange={(e) => setFirst(e.target.value)}
                 name="first"
-                required
+                aria-invalid={errors?.first ? "true" : "false"}
+                aria-describedby={errors?.first ? "first-error" : undefined}
               />
+              {showErrors && errors?.first && (
+                <Text size="2" color="red" id="first-error" role="alert">
+                  {errors?.first._errors.join(", ")}
+                </Text>
+              )}
             </label>
 
             <label className="flex flex-col gap-1">
@@ -73,13 +96,22 @@ export default function AddUserDialog({
                 value={last}
                 onChange={(e) => setLast(e.target.value)}
                 name="last"
-                required
+                aria-invalid={errors?.first ? "true" : "false"}
+                aria-describedby={errors?.first ? "last-error" : undefined}
               />
+              {showErrors && errors?.last && (
+                <Text size="2" color="red" id="last-error" role="alert">
+                  {errors?.last._errors.join(", ")}
+                </Text>
+              )}
             </label>
 
             <label className="flex flex-col gap-1">
               <Text weight="bold">Role</Text>
-              <RoleSelect defaultValue={user?.roleId} />
+              <RoleSelect
+                defaultValue={roleId}
+                onValueChange={(roleId) => setRoleId(roleId)}
+              />
             </label>
           </Flex>
 
@@ -97,8 +129,8 @@ export default function AddUserDialog({
             </AlertDialog.Cancel>
 
             <Button
-              disabled={status === "pending"}
               loading={status === "pending"}
+              onClick={() => setShowErrors(true)}
             >
               Add user
             </Button>

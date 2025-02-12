@@ -2,25 +2,24 @@ import {
   Flex,
   Table,
   Avatar,
-  IconButton,
   Skeleton,
   TextField,
   Button,
-  DropdownMenu,
 } from "@radix-ui/themes";
 import { DotsHorizontalIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { QueryStatus, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getUsers, UserType } from "../api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 import AddUserDialog from "./AddUserDialog";
 import { ErrorCallout } from "./ErrorCallout";
 import { AddUserButton } from "./AddUserButton";
 import { LoadingSR } from "./LoadingSR";
+import { Actions } from "./Actions";
 
-function PendingUIRows() {
-  return Array.from({ length: 10 }, (_, i) => (
+function PendingUIRows({ length }: { length: number }) {
+  return Array.from({ length }, (_, i) => (
     <Table.Row key={i + ""}>
       <Table.Cell>
         <Flex align="center" gap="2">
@@ -59,37 +58,28 @@ function formatDate(dateStr: string) {
 }
 
 function UserActions({ user }: { user: UserType }) {
-  const [modal, setModal] = useState<"delete" | "edit" | undefined>();
+  const [modal, setModal] = useState<string | undefined>();
 
   return (
     <>
-      {modal === "edit" && (
-        <AddUserDialog user={user} onClose={() => setModal(undefined)} />
-      )}
-      {modal === "delete" && (
-        <DeleteUserDialog user={user} onClose={() => setModal(undefined)} />
-      )}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <IconButton variant="ghost" color="gray" radius="full" size="1">
-            <span className="sr-only">
-              Actions for user {user.first} {user.last}
-            </span>
-            <DotsHorizontalIcon />
-          </IconButton>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="end" sideOffset={4} alignOffset={4}>
-          <DropdownMenu.Item onClick={() => setModal("edit")} className="!pr-8">
-            Edit user
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onClick={() => setModal("delete")}
-            className="!pr-8"
-          >
-            Delete user
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+      <Actions
+        label={`Actions for user ${user.first} ${user.last}`}
+        onValueChange={(action) => setModal(action)}
+        actions={[
+          { label: "Edit user", action: "edit" },
+          { label: "Delete user", action: "delete" },
+        ]}
+      />
+      <AddUserDialog
+        user={user}
+        open={modal === "edit"}
+        onOpenChange={() => setModal(undefined)}
+      />
+      <DeleteUserDialog
+        user={user}
+        open={modal === "delete"}
+        onOpenChange={() => setModal(undefined)}
+      />
     </>
   );
 }
@@ -97,7 +87,7 @@ function UserActions({ user }: { user: UserType }) {
 function UserAvatar({ user }: { user: UserType }) {
   return (
     <Avatar
-      src={user.photo}
+      src={user.photo ?? undefined}
       fallback={user.first.slice(0, 1)}
       alt={`Avatar of ${user.first} ${user.last}`}
       size="1"
@@ -106,16 +96,17 @@ function UserAvatar({ user }: { user: UserType }) {
   );
 }
 
-function UsersTable({
-  data,
-  status,
-  onPageChange,
-}: {
-  data: Awaited<ReturnType<typeof getUsers>> | undefined;
-  status: QueryStatus;
-  onPageChange: (page: number) => void;
-}) {
+function UsersTable({ searchText }: { searchText: string }) {
+  const [page, setPage] = useState(1);
+  const { data, status } = useQuery({
+    queryKey: ["users", page, searchText],
+    queryFn: () => getUsers({ page, searchText }),
+  });
   const { usersWithRoles: users, prev, next } = data || {};
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchText]);
 
   if (status === "error") {
     return <ErrorCallout content="There was an error loading the users." />;
@@ -136,7 +127,13 @@ function UsersTable({
 
       <Table.Body>
         {status === "pending" ? (
-          <PendingUIRows />
+          <PendingUIRows length={10} />
+        ) : users?.length === 0 ? (
+          <Table.Row>
+            <Table.Cell colSpan={4} className="text-center">
+              No users found
+            </Table.Cell>
+          </Table.Row>
         ) : (
           users?.map((user) => (
             <Table.Row key={user.id}>
@@ -162,9 +159,10 @@ function UsersTable({
                 color="gray"
                 variant={!prev ? "soft" : "surface"}
                 disabled={!prev}
-                onClick={() => prev && onPageChange(prev)}
+                onClick={() => prev && setPage(prev)}
                 size="1"
                 aria-label="Previous Page"
+                highContrast
               >
                 Previous
               </Button>
@@ -173,7 +171,7 @@ function UsersTable({
                 type="button"
                 color="gray"
                 variant="surface"
-                onClick={() => next && onPageChange(next)}
+                onClick={() => next && setPage(next)}
                 disabled={!next}
                 size="1"
                 aria-label="Next Page"
@@ -197,16 +195,11 @@ function UsersTable({
 const DEBOUNCE_DELAY_IN_MS = 500;
 
 export function Users() {
-  const [page, setPage] = useState(1);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearchText] = useDebounceValue(
     searchText,
     DEBOUNCE_DELAY_IN_MS,
   );
-  const { data, status } = useQuery({
-    queryKey: ["users", page, debouncedSearchText],
-    queryFn: () => getUsers({ page, searchText: debouncedSearchText }),
-  });
 
   return (
     <Flex direction="column" gap="5">
@@ -227,11 +220,7 @@ export function Users() {
         <AddUserButton />
       </Flex>
 
-      <UsersTable
-        data={data}
-        status={status}
-        onPageChange={(page) => setPage(page)}
-      />
+      <UsersTable searchText={debouncedSearchText} />
     </Flex>
   );
 }

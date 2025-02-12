@@ -9,7 +9,7 @@ const userSchema = z.object({
   first: z.string(),
   last: z.string(),
   roleId: z.string(),
-  photo: z.string(),
+  photo: z.string().nullable(),
 });
 
 export type UserType = z.infer<typeof userSchema>;
@@ -28,6 +28,21 @@ const roleSchema = z.object({
   isDefault: z.boolean(),
   description: z.string(),
 });
+
+export type RoleType = z.infer<typeof roleSchema>;
+
+const roleApiResponseSchema = z.object({
+  data: z.array(roleSchema),
+});
+
+export async function getRoles() {
+  const response = await fetch(`${API_URL}/roles`);
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+
+  return roleApiResponseSchema.parse(await response.json());
+}
 
 export async function getUsers({
   page,
@@ -54,19 +69,26 @@ export async function getUsers({
   return { ...data, usersWithRoles };
 }
 
+export const formUserSchema = z.object({
+  first: z.string().trim().min(1, "First name is required"),
+  last: z.string().trim().min(1, "Last name is required"),
+  roleId: z.string().trim().min(1, "Role is required"),
+});
+
+function normalizeServerError(message: string) {
+  return message === "Server Error"
+    ? "An error occurred while processing the request"
+    : message;
+}
+
 export async function addUser(data: Partial<Omit<UserType, "id">>) {
   try {
-    if (data.first) {
-      data.first = data.first.trim();
-    }
-    if (data.last) {
-      data.last = data.last.trim();
-    }
-    if (!data.first) {
-      return { success: false, message: "First name is required" };
-    }
-    if (!data.last) {
-      return { success: false, message: "Last name is required" };
+    const parsedData = formUserSchema.safeParse(data);
+    if (!parsedData.success) {
+      return {
+        success: false,
+        message: "Invalid data",
+      };
     }
 
     const response = await fetch(`${API_URL}/users`, {
@@ -79,7 +101,10 @@ export async function addUser(data: Partial<Omit<UserType, "id">>) {
     const responseBody = await response.json();
 
     if (!response.ok) {
-      return { success: false, message: responseBody.message };
+      return {
+        success: false,
+        message: normalizeServerError(responseBody.message),
+      };
     }
 
     return { success: true };
@@ -97,11 +122,12 @@ export async function updateUser(
   data: Partial<Omit<UserType, "id">>,
 ) {
   try {
-    if (data.first) {
-      data.first = data.first.trim();
-    }
-    if (data.last) {
-      data.last = data.last.trim();
+    const parsedData = formUserSchema.safeParse(data);
+    if (!parsedData.success) {
+      return {
+        success: false,
+        message: "Invalid data",
+      };
     }
 
     const response = await fetch(`${API_URL}/users/${id}`, {
@@ -114,7 +140,10 @@ export async function updateUser(
     const responseBody = await response.json();
 
     if (!response.ok) {
-      return { success: false, message: responseBody.message };
+      return {
+        success: false,
+        message: normalizeServerError(responseBody.message),
+      };
     }
 
     return { success: true };
@@ -127,10 +156,19 @@ export async function updateUser(
   }
 }
 
+export async function addOrUpdateRole(data: Partial<RoleType>) {
+  if (data.id) {
+    // Don't try to update the isDefault field when updating a role
+    delete data.isDefault;
+    return updateRole(data.id, data);
+  }
+
+  return addRole(data);
+}
+
 export async function addOrUpdateUser(
-  data: Partial<Omit<UserType, "id">> & { userId: string },
+  data: Partial<Omit<UserType, "id">> & { userId: string | undefined },
 ) {
-  console.log("userId", data.userId);
   if (data.userId) {
     return updateUser(data.userId, data);
   }
@@ -173,13 +211,19 @@ export async function deleteRole(id: string) {
   }
 }
 
+export const formRoleSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").optional(),
+  description: z.string().trim().optional(),
+});
+
 export async function addRole(data: Partial<Omit<RoleType, "id">>) {
   try {
-    if (data.name) {
-      data.name = data.name.trim();
-    }
-    if (data.description) {
-      data.description = data.description.trim();
+    const parsedData = formRoleSchema.safeParse(data);
+    if (!parsedData.success) {
+      return {
+        success: false,
+        message: "Invalid data",
+      };
     }
 
     const response = await fetch(`${API_URL}/roles`, {
@@ -192,7 +236,10 @@ export async function addRole(data: Partial<Omit<RoleType, "id">>) {
     const responseBody = await response.json();
 
     if (!response.ok) {
-      return { success: false, message: responseBody.message };
+      return {
+        success: false,
+        message: normalizeServerError(responseBody.message),
+      };
     }
 
     return { success: true };
@@ -210,11 +257,12 @@ export async function updateRole(
   data: Partial<Omit<RoleType, "id">>,
 ) {
   try {
-    if (data.name) {
-      data.name = data.name.trim();
-    }
-    if (data.description) {
-      data.description = data.description.trim();
+    const parsedData = formRoleSchema.safeParse(data);
+    if (!parsedData.success) {
+      return {
+        success: false,
+        message: "Invalid data",
+      };
     }
 
     const response = await fetch(`${API_URL}/roles/${id}`, {
@@ -227,7 +275,10 @@ export async function updateRole(
     const responseBody = await response.json();
 
     if (!response.ok) {
-      return { success: false, message: responseBody.message };
+      return {
+        success: false,
+        message: normalizeServerError(responseBody.message),
+      };
     }
 
     return { success: true };
@@ -238,19 +289,4 @@ export async function updateRole(
       message: "An error occurred while updating the role",
     };
   }
-}
-
-export type RoleType = z.infer<typeof roleSchema>;
-
-const roleApiResponseSchema = z.object({
-  data: z.array(roleSchema),
-});
-
-export async function getRoles() {
-  const response = await fetch(`${API_URL}/roles`);
-  if (!response.ok) {
-    throw new Error("Network response was not ok");
-  }
-
-  return roleApiResponseSchema.parse(await response.json());
 }
