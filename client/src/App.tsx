@@ -5,7 +5,10 @@ import { Roles } from "./component/Roles";
 function App() {
   return (
     <div className="w-full max-w-[850px] mx-auto">
-      <Tabs.Root defaultValue="users" className="flex flex-col gap-6">
+      <Tabs.Root
+        defaultValue="users"
+        className="flex flex-col gap-6 max-lg:px-4"
+      >
         <Tabs.List>
           <Tabs.Trigger value="users">Users</Tabs.Trigger>
           <Tabs.Trigger value="roles">Roles</Tabs.Trigger>

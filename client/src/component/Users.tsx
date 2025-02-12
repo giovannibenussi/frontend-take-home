@@ -118,7 +118,9 @@ function UsersTable({ searchText }: { searchText: string }) {
         <Table.Row>
           <Table.ColumnHeaderCell>User</Table.ColumnHeaderCell>
           <Table.ColumnHeaderCell>Role</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>Joined</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell className="max-md:hidden">
+            Joined
+          </Table.ColumnHeaderCell>
           <Table.ColumnHeaderCell>
             <span className="sr-only">Actions</span>
           </Table.ColumnHeaderCell>
@@ -144,7 +146,9 @@ function UsersTable({ searchText }: { searchText: string }) {
                 </Flex>
               </Table.Cell>
               <Table.Cell>{user.role?.name || "-"}</Table.Cell>
-              <Table.Cell>{formatDate(user.createdAt)}</Table.Cell>
+              <Table.Cell className="max-md:hidden">
+                {formatDate(user.createdAt)}
+              </Table.Cell>
               <Table.Cell className="flex justify-end">
                 <UserActions user={user} />
               </Table.Cell>
